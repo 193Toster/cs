@@ -1,0 +1,114 @@
+using CounterStrikeSharp.API;
+using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Entities;
+using CounterStrikeSharp.API.Modules.Utils;
+
+namespace BotCopy;
+
+public class BotCopy : BasePlugin
+{
+    public override string ModuleName => "Bot Copy";
+    public override string ModuleVersion => "1.0.0";
+
+    public override void Load(bool hotReload)
+    {
+        // Регистрируем команды
+        AddCommand("css_copybot", "Скопировать позицию и угол на всех ботов", Command_CopyBot);
+        AddCommand("css_copybot_nearest", "Скопировать позицию и угол на ближайшего бота", Command_CopyNearestBot);
+        
+        // Чат-триггеры
+        AddCommand("say", "Chat command", Command_Chat, HookMode.Pre);
+        AddCommand("say_team", "Team chat command", Command_Chat, HookMode.Pre);
+    }
+
+    private void Command_CopyBot(CCSPlayerController? client, CommandInfo info)
+    {
+        if (client == null || !client.IsValid || client.PlayerPawn?.IsValid != true)
+        {
+            client?.PrintToChat("Вы должны быть живы, чтобы использовать эту команду.");
+            return;
+        }
+
+        // Получаем позицию и углы игрока
+        var pawn = client.PlayerPawn.Value;
+        Vector pos = pawn.AbsOrigin!;
+        QAngle ang = pawn.AbsRotation!;
+
+        // Ищем всех ботов (не игроков) на сервере
+        var bots = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHuman);
+        int count = 0;
+        foreach (var bot in bots)
+        {
+            if (bot.PlayerPawn?.IsValid == true)
+            {
+                // Телепортируем бота
+                bot.PlayerPawn.Value.Teleport(pos, ang, new Vector(0, 0, 0));
+                count++;
+            }
+        }
+
+        client.PrintToChat($"Скопировано позиция и угол на {count} ботов.");
+    }
+
+    private void Command_CopyNearestBot(CCSPlayerController? client, CommandInfo info)
+    {
+        if (client == null || !client.IsValid || client.PlayerPawn?.IsValid != true)
+        {
+            client?.PrintToChat("Вы должны быть живы, чтобы использовать эту команду.");
+            return;
+        }
+
+        var pawn = client.PlayerPawn.Value;
+        Vector pos = pawn.AbsOrigin!;
+        QAngle ang = pawn.AbsRotation!;
+
+        // Находим ближайшего бота
+        var bots = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHuman).ToList();
+        if (bots.Count == 0)
+        {
+            client.PrintToChat("На сервере нет ботов.");
+            return;
+        }
+
+        CCSPlayerController? nearest = null;
+        float minDist = float.MaxValue;
+        foreach (var bot in bots)
+        {
+            if (bot.PlayerPawn?.IsValid == true)
+            {
+                float dist = bot.PlayerPawn.Value.AbsOrigin!.Distance(pos);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    nearest = bot;
+                }
+            }
+        }
+
+        if (nearest != null)
+        {
+            nearest.PlayerPawn.Value.Teleport(pos, ang, new Vector(0, 0, 0));
+            client.PrintToChat($"Бот {nearest.PlayerName} скопировал вашу позицию и угол.");
+        }
+    }
+
+    private void Command_Chat(CCSPlayerController? client, CommandInfo info)
+    {
+        if (client == null || !client.IsValid) return;
+
+        string message = info.ArgString.Trim();
+        if (message.StartsWith(".copybot", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("!copybot", StringComparison.OrdinalIgnoreCase))
+        {
+            Command_CopyBot(client, info);
+            info.Handled = true;
+        }
+        else if (message.StartsWith(".copybotnear", StringComparison.OrdinalIgnoreCase) ||
+                 message.StartsWith("!copybotnear", StringComparison.OrdinalIgnoreCase))
+        {
+            Command_CopyNearestBot(client, info);
+            info.Handled = true;
+        }
+    }
+}

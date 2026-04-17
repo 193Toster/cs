@@ -1,0 +1,12 @@
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.csproj.AssemblyReference.cache
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.GeneratedMSBuildEditorConfig.editorconfig
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.AssemblyInfoInputs.cache
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.AssemblyInfo.cs
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.csproj.CoreCompileInputs.cache
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\bin\Release\net8.0\bot_place.deps.json
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\bin\Release\net8.0\bot_place.dll
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\bin\Release\net8.0\bot_place.pdb
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.dll
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\refint\bot_place.dll
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\bot_place.pdb
+D:\cs2-server\game\csgo\addons\plugins_src\bot_place\obj\Release\net8.0\ref\bot_place.dll

@@ -1,0 +1,43 @@
+using CounterStrikeSharp.API;
+using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
+using CounterStrikeSharp.API.Modules.Utils;
+
+namespace KeepCheatsOn;
+
+public class KeepCheatsOn : BasePlugin
+{
+    public override string ModuleName => "Keep Cheats On";
+    public override string ModuleVersion => "1.0.0";
+
+    private bool _wasEmpty = false;
+
+    public override void Load(bool hotReload)
+    {
+        // Проверяем начальное состояние
+        RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
+        {
+            // Игрок подключился. Если сервер был пуст, восстанавливаем читы.
+            if (_wasEmpty)
+            {
+                Server.ExecuteCommand("sv_cheats 1");
+                _wasEmpty = false;
+                Console.WriteLine("[KeepCheatsOn] sv_cheats restored to 1 after player join.");
+            }
+            return HookResult.Continue;
+        });
+
+        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        {
+            // Игрок отключился. Проверяем, не осталось ли никого (включая ботов).
+            var allPlayers = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot).ToList();
+            if (allPlayers.Count == 0)
+            {
+                _wasEmpty = true;
+                Console.WriteLine("[KeepCheatsOn] Server became empty. Waiting for player to restore sv_cheats.");
+            }
+            return HookResult.Continue;
+        });
+    }
+}
