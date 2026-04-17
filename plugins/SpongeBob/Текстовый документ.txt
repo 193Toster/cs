@@ -1,0 +1,1 @@
+{"T_model": "D:\cs2-server\game\csgo\addons\counterstrikesharp\plugins\SpongeBob\spongebob_player_model", "CT_model": "D:\cs2-server\game\csgo\addons\counterstrikesharp\plugins\SpongeBob\patrik_player_model"}
