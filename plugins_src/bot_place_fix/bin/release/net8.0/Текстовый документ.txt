@@ -1,0 +1,120 @@
+using CounterStrikeSharp.API;
+using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes;
+using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Utils;
+using CounterStrikeSharp.API.Modules.Memory;
+using System;
+using System.Linq;
+
+namespace BotPlacerFinal;
+
+[MinimumApiVersion(367)]
+public class BotPlacerPlugin : BasePlugin
+{
+    public override string ModuleName => "Bot Placer (Schema Safe)";
+    public override string ModuleVersion => "3.1.0";
+
+    public override void Load(bool hotReload)
+    {
+        Console.WriteLine("[BotPlacer] Plugin loaded.");
+        AddCommand("css_bot_place", "Place a bot at your location, copy view angle and crouch", OnBotPlaceCommand);
+    }
+
+    private void OnBotPlaceCommand(CCSPlayerController? player, CommandInfo info)
+    {
+        if (player == null || !player.IsValid || player.IsBot || player.TeamNum < (int)CsTeam.Terrorist)
+        {
+            info.ReplyToCommand("This command can only be used by a human player on a team.");
+            return;
+        }
+
+        var playerPawn = player.PlayerPawn.Value;
+        if (playerPawn == null || !playerPawn.IsValid)
+        {
+            info.ReplyToCommand("Could not get your player pawn.");
+            return;
+        }
+
+        bool isCrouching = false;
+        if (playerPawn.MovementServices != null)
+        {
+            var movementService = new CCSPlayer_MovementServices(playerPawn.MovementServices.Handle);
+            isCrouching = (int)movementService.DuckAmount == 1;
+        }
+
+        var position = playerPawn.AbsOrigin!;
+        var eyeAngles = playerPawn.EyeAngles;
+
+        CreateBot(player.Team, bot =>
+        {
+            if (bot == null)
+            {
+                info.ReplyToCommand("Failed to create bot.");
+                return;
+            }
+            AddTimer(0.1f, () =>
+            {
+                if (bot.PlayerPawn.Value != null && bot.PlayerPawn.Value.IsValid)
+                    SetupBot(bot, position, eyeAngles, isCrouching);
+                else
+                    Console.WriteLine("[BotPlacer] Bot pawn not ready.");
+            });
+        });
+    }
+
+    private void CreateBot(CsTeam team, Action<CCSPlayerController?> callback)
+    {
+        var botsBefore = Utilities.GetPlayers().Where(p => p.IsBot).ToList();
+        Server.ExecuteCommand(team == CsTeam.CounterTerrorist ? "bot_add_ct" : "bot_add_t");
+        AddTimer(0.1f, () =>
+        {
+            var botsAfter = Utilities.GetPlayers().Where(p => p.IsBot).ToList();
+            callback(botsAfter.Except(botsBefore).FirstOrDefault());
+        });
+    }
+
+    private void SetupBot(CCSPlayerController bot, Vector position, QAngle eyeAngles, bool crouch)
+    {
+        var botPawn = bot.PlayerPawn.Value;
+        if (botPawn == null || !botPawn.IsValid) return;
+
+        // 1. Teleport to position with ZERO body rotation (model stays as is)
+        botPawn.Teleport(position, QAngle.Zero, new Vector(0, 0, 0));
+
+        // 2. Safely set view angles via Schema with sv_cheats 1
+        Server.NextFrame(() =>
+        {
+            if (!botPawn.IsValid) return;
+
+            // Enable cheats to allow direct network var writes without crashing
+            Server.ExecuteCommand("sv_cheats 1");
+            try
+            {
+                Schema.SetSchemaValue<QAngle>(botPawn.Handle, "CCSPlayerPawn", "m_angEyeAngles", eyeAngles);
+                Console.WriteLine($"[BotPlacer] View angles set: {eyeAngles}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BotPlacer] Schema set failed: {ex.Message}");
+            }
+            finally
+            {
+                //Server.ExecuteCommand("sv_cheats 0");
+            }
+        });
+
+        // 3. Crouch
+        if (crouch)
+        {
+            AddTimer(0.15f, () =>
+            {
+                if (!botPawn.IsValid) return;
+                var movementService = new CCSPlayer_MovementServices(botPawn.MovementServices!.Handle);
+                movementService.DuckAmount = 1;
+                if (botPawn.Bot != null) botPawn.Bot.IsCrouching = true;
+                Console.WriteLine("[BotPlacer] Crouch applied.");
+            });
+        }
+    }
+}
